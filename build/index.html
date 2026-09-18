@@ -508,6 +508,220 @@
 
   <!-- JAVASCRIPT LOGIC -->
   <script>
+
+    // =======================================================================
+    // UNIVERSAL DUAL-ENGINE ADAPTER: FULL IN-MEMORY ENGINE FOR STATIC HOSTING
+    // =======================================================================
+    const isLocalServer = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && window.location.port !== '';
+
+    const STATIC_DATA = {
+      corridor: "New Delhi - Kanpur High Density Corridor (Northern and North Central Railway)",
+      stations: [
+        { name: "New Delhi (NDLS)", km: 0 },
+        { name: "Ghaziabad (GZB)", km: 25 },
+        { name: "Aligarh (ALJN)", km: 130 },
+        { name: "Tundla (TDL)", km: 205 },
+        { name: "Kanpur Central (CNB)", km: 440 }
+      ],
+      trains: [
+        { no: "12004", name: "Shatabdi Express", route: "New Delhi (NDLS) -> Lucknow (LJN)", track_line: "Down Main Line", current_location: "Ghaziabad Outer (KM 30)", current_km: 30, speed: 110, type: "Express", status: "RUNNING ON TIME", scheduled_pass: "07:00 AM", pass_time: 420 },
+        { no: "22436", name: "Vande Bharat Express", route: "New Delhi (NDLS) -> Varanasi (BSB)", track_line: "Down Main Line", current_location: "Approaching Aligarh (KM 120)", current_km: 120, speed: 130, type: "Superfast", status: "RUNNING ON TIME", scheduled_pass: "09:00 AM", pass_time: 540 },
+        { no: "12302", name: "Howrah Rajdhani Express", route: "New Delhi (NDLS) -> Howrah (HWH)", track_line: "Down Main Line", current_location: "New Delhi Yard (KM 5)", current_km: 5, speed: 120, type: "Superfast", status: "DEPARTED", scheduled_pass: "12:00 PM", pass_time: 720 },
+        { no: "BOXN-902", name: "Coal Freight Wagon", route: "Dadri (DFCCIL) -> Prayagraj Chheoki", track_line: "Down Loop Line", current_location: "Khurja Jn (KM 85)", current_km: 85, speed: 65, type: "Freight", status: "REGULATED AT LOOP", scheduled_pass: "03:00 PM", pass_time: 900 },
+        { no: "12418", name: "Prayagraj Express", route: "New Delhi (NDLS) -> Prayagraj Jn (PRYJ)", track_line: "Down Main Line", current_location: "Near Tundla (KM 195)", current_km: 195, speed: 105, type: "Superfast", status: "RUNNING ON TIME", scheduled_pass: "06:00 PM", pass_time: 1080 },
+        { no: "12554", name: "Vaishali Superfast Express", route: "New Delhi (NDLS) -> Saharsa (SHC)", track_line: "Down Main Line", current_location: "Hathras Jn (KM 155)", current_km: 155, speed: 95, type: "Express", status: "DELAYED 15 MIN", scheduled_pass: "07:15 PM", pass_time: 1155 },
+        { no: "12802", name: "Purushottam Express", route: "Puri (PURI) -> New Delhi (NDLS)", track_line: "Up Main Line", current_location: "Kanpur Outer (KM 415)", current_km: 415, speed: 105, type: "Superfast", status: "RUNNING ON TIME", scheduled_pass: "11:20 AM", pass_time: 680 }
+      ],
+      requests: [
+        { id: "REQ-01", dept: "CIVIL", task: "Track Tamping (TMS)", km: 130, track_line: "Down Main Line", duration: 120, urgency: "CRITICAL" },
+        { id: "REQ-02", dept: "ELECTRICAL", task: "OHE Neutral Section (TDMS)", km: 132, track_line: "Down Main Line", duration: 90, urgency: "HIGH" },
+        { id: "REQ-03", dept: "SIGNAL", task: "Point Machine 16A Overhaul (SMMS)", km: 129, track_line: "Down Main Line", duration: 60, urgency: "MEDIUM" },
+        { id: "REQ-04", dept: "CIVIL", task: "Deep Screening Machine (TMS)", km: 205, track_line: "Loop Line 2", duration: 120, urgency: "MEDIUM" }
+      ],
+      historical_maintenance: [
+        { block_id: "BLK-HIST-101", date: "17-Sep-2026", section: "Ghaziabad (KM 25-28)", track_line: "Up Main Line", departments: "CIVIL, ELECTRICAL", tasks: "Track Tamping + OHE Sag Adjustment", duration: 90, decision: "ALLOWED", remarks: "Completed within 1h 25m without train delay" },
+        { block_id: "BLK-HIST-102", date: "16-Sep-2026", section: "Aligarh Outer (KM 128)", track_line: "Down Main Line", departments: "SIGNAL", tasks: "Point Machine 14B Overhaul", duration: 60, decision: "ALLOWED", remarks: "Authorized during midday freight window" },
+        { block_id: "BLK-HIST-103", date: "16-Sep-2026", section: "Tundla Jn (KM 202-205)", track_line: "Loop Line 2", departments: "CIVIL", tasks: "Deep Ballast Screening Machine", duration: 180, decision: "DENIED", remarks: "Deferred due to festival express congestion" },
+        { block_id: "BLK-HIST-104", date: "15-Sep-2026", section: "Kanpur Yard (KM 438)", track_line: "Up Main Line", departments: "ELECTRICAL", tasks: "25kV OHE Isolator Switch Replacement", duration: 45, decision: "ALLOWED", remarks: "Night block safely executed" }
+      ],
+      completed_trains: [
+        { train_no: "12424", train_name: "Dibrugarh Rajdhani Express", crossed_time: "05:15 AM", track_line: "Up Main Line", speed: 125, delay: 0, status: "CLEARED ON TIME" },
+        { train_no: "12314", train_name: "Sealdah Rajdhani Express", crossed_time: "05:45 AM", track_line: "Up Main Line", speed: 120, delay: 4, status: "CLEARED ON TIME" },
+        { train_no: "22435", train_name: "Vande Bharat Express", crossed_time: "06:10 AM", track_line: "Down Main Line", speed: 130, delay: 0, status: "CLEARED ON TIME" },
+        { train_no: "BTPN-441", train_name: "Petroleum Tanker Freight", crossed_time: "06:40 AM", track_line: "Down Loop Line", speed: 65, delay: 10, status: "REGULATED AT SIDING" },
+        { train_no: "12560", train_name: "Shiv Ganga Express", crossed_time: "07:05 AM", track_line: "Up Main Line", speed: 110, delay: 0, status: "CLEARED ON TIME" },
+        { train_no: "12801", train_name: "Purushottam Express", crossed_time: "07:40 AM", track_line: "Up Main Line", speed: 105, delay: 5, status: "CLEARED ON TIME" }
+      ]
+    };
+
+    let clientDecisions = {};
+
+    function handleStaticApi(url, options) {
+      let pathname = url;
+      let searchParams = new URLSearchParams();
+      if (url.includes('?')) {
+        const parts = url.split('?');
+        pathname = parts[0];
+        searchParams = new URLSearchParams(parts[1]);
+      }
+
+      function jsonResponse(obj, status = 200) {
+        return new Response(JSON.stringify(obj), {
+          status: status,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+
+      if (pathname.endsWith('/api/data')) {
+        return jsonResponse(STATIC_DATA);
+      }
+      if (pathname.endsWith('/api/route-trains')) {
+        return jsonResponse(STATIC_DATA.trains);
+      }
+      if (pathname.endsWith('/api/delay-history')) {
+        return jsonResponse({
+          days: ["11-Sep", "12-Sep", "13-Sep", "14-Sep", "15-Sep", "16-Sep", "17-Sep", "18-Sep (Today)"],
+          minutes_saved: [245, 290, 310, 275, 340, 315, 335, 320],
+          cumulative_hours: 37.2,
+          cost_saved_crores: 3.65,
+          punctuality_gain: "+8.7%"
+        });
+      }
+      if (pathname.endsWith('/api/track-train')) {
+        const q = (searchParams.get('query') || '').toLowerCase().trim();
+        for (const t of STATIC_DATA.trains) {
+          if (t.no.toLowerCase().includes(q) || t.name.toLowerCase().includes(q)) {
+            const distLeft = t.track_line.includes('Down') ? Math.max(0, 440 - t.current_km) : t.current_km;
+            const hoursLeft = distLeft / Math.max(t.speed, 40);
+            const minsLeft = Math.round(hoursLeft * 60);
+            const hrs = Math.floor(minsLeft / 60);
+            const rMins = minsLeft % 60;
+            return jsonResponse({
+              found: true,
+              train_no: t.no,
+              train_name: t.name,
+              route: t.route,
+              current_location: t.current_location,
+              current_km: t.current_km,
+              current_speed_kmph: t.speed,
+              track_line: t.track_line,
+              status: t.status,
+              target_division: "Kanpur Central (NCR Division HQ - KM 440)",
+              distance_to_division_km: distLeft,
+              eta_text: hrs > 0 ? `${hrs} hr ${rMins} min` : `${rMins} min`,
+              eta_minutes: minsLeft
+            });
+          }
+        }
+        return jsonResponse({ found: false, message: `No train found matching '${q}'. Try 12302, 22436, or Shatabdi.` });
+      }
+      if (pathname.endsWith('/api/decide-block')) {
+        if (options && options.body) {
+          try {
+            const b = JSON.parse(options.body);
+            clientDecisions[b.block_id] = b.action;
+          } catch(e) {}
+        }
+        return jsonResponse({ status: "Decision Recorded" });
+      }
+      if (pathname.endsWith('/api/history')) {
+        return jsonResponse({
+          maintenance_history: STATIC_DATA.historical_maintenance,
+          completed_trains: STATIC_DATA.completed_trains
+        });
+      }
+      if (pathname.endsWith('/api/add-demand')) {
+        if (options && options.body) {
+          try {
+            const b = JSON.parse(options.body);
+            STATIC_DATA.requests.unshift({
+              id: `EMERGENCY-${STATIC_DATA.requests.length + 1}`,
+              dept: b.dept,
+              task: b.task,
+              km: b.km,
+              track_line: b.track_line,
+              duration: b.duration,
+              urgency: b.urgency
+            });
+          } catch(e) {}
+        }
+        return jsonResponse({ status: "Added" });
+      }
+      if (pathname.endsWith('/api/optimize')) {
+        const delayTrain = searchParams.get('delay_train_no') || '';
+        const delayMins = parseInt(searchParams.get('delay_minutes') || '0', 10);
+        let trains = JSON.parse(JSON.stringify(STATIC_DATA.trains));
+        if (delayTrain && delayMins > 0) {
+          trains.forEach(t => {
+            if (t.no === delayTrain) t.pass_time += delayMins;
+          });
+        }
+        const blocks = [
+          {
+            block_id: "BLK-ALJN-BUNDLE",
+            section: "Aligarh (KM 129 - 132)",
+            km: 130,
+            track_line: "Down Main Line (Line 2)",
+            start_time: "09:45",
+            end_time: "11:45",
+            start_min: 585,
+            end_min: 705,
+            duration: 120,
+            departments: ["CIVIL (TMS)", "ELECTRICAL (TDMS)", "SIGNAL (SMMS)"],
+            tasks: ["Track Tamping", "OHE Neutral Section", "Point Machine Overhaul"],
+            decision: clientDecisions["BLK-ALJN-BUNDLE"] || "PENDING",
+            status: clientDecisions["BLK-ALJN-BUNDLE"] === "ALLOW" ? "AUTHORIZED (GRANTED)" : (clientDecisions["BLK-ALJN-BUNDLE"] === "DENY" ? "DEFERRED (DENIED)" : "PENDING DISPATCHER ACTION")
+          },
+          {
+            block_id: "BLK-TDL-SOLO",
+            section: "Tundla (KM 205)",
+            km: 205,
+            track_line: "Loop Line 2 (Siding)",
+            start_time: "06:30",
+            end_time: "08:30",
+            start_min: 390,
+            end_min: 510,
+            duration: 120,
+            departments: ["CIVIL (TMS)"],
+            tasks: ["Deep Screening Machine"],
+            decision: clientDecisions["BLK-TDL-SOLO"] || "PENDING",
+            status: clientDecisions["BLK-TDL-SOLO"] === "ALLOW" ? "AUTHORIZED (GRANTED)" : (clientDecisions["BLK-TDL-SOLO"] === "DENY" ? "DEFERRED (DENIED)" : "PENDING DISPATCHER ACTION")
+          }
+        ];
+        return jsonResponse({
+          status: "Optimized",
+          trains_evaluated: trains,
+          scheduled_blocks: blocks,
+          metrics: {
+            capacity_gain: "+19.2%",
+            delay_saved_min: 320,
+            bundling_efficiency: "2.5 Depts/Block"
+          }
+        });
+      }
+      return jsonResponse({ error: "Not Found" }, 404);
+    }
+
+    const originalFetch = window.fetch;
+    window.fetch = async function(url, options) {
+      if (typeof url === 'string' && url.includes('/api/')) {
+        if (isLocalServer) {
+          try {
+            const res = await originalFetch(url, options);
+            const ct = res.headers.get('content-type') || '';
+            if (res.ok && ct.includes('application/json')) {
+              return res;
+            }
+          } catch(e) {
+            console.warn('Local server offline, falling back to client-side engine:', e);
+          }
+        }
+        return handleStaticApi(url, options);
+      }
+      return originalFetch(url, options);
+    };
+
+
     let corridorData = null;
     let map = null;
     let tileLayers = {};
@@ -824,193 +1038,7 @@
         body: JSON.stringify(emergencyData)
       });
 
-      await 
-    // =========================================================
-    // UNIVERSAL DUAL-ENGINE ADAPTER (LOCAL PYTHON + STATIC NETLIFY)
-    // =========================================================
-    const STATIC_DATA = {
-      corridor: "New Delhi - Kanpur High Density Corridor (Northern and North Central Railway)",
-      stations: [
-        { name: "New Delhi (NDLS)", km: 0 },
-        { name: "Ghaziabad (GZB)", km: 25 },
-        { name: "Aligarh (ALJN)", km: 130 },
-        { name: "Tundla (TDL)", km: 205 },
-        { name: "Kanpur Central (CNB)", km: 440 }
-      ],
-      trains: [
-        { no: "12004", name: "Shatabdi Express", route: "New Delhi (NDLS) -> Lucknow (LJN)", track_line: "Down Main Line", current_location: "Ghaziabad Outer (KM 30)", current_km: 30, speed: 110, type: "Express", status: "RUNNING ON TIME", scheduled_pass: "07:00 AM", pass_time: 420 },
-        { no: "22436", name: "Vande Bharat Express", route: "New Delhi (NDLS) -> Varanasi (BSB)", track_line: "Down Main Line", current_location: "Approaching Aligarh (KM 120)", current_km: 120, speed: 130, type: "Superfast", status: "RUNNING ON TIME", scheduled_pass: "09:00 AM", pass_time: 540 },
-        { no: "12302", name: "Howrah Rajdhani Express", route: "New Delhi (NDLS) -> Howrah (HWH)", track_line: "Down Main Line", current_location: "New Delhi Yard (KM 5)", current_km: 5, speed: 120, type: "Superfast", status: "DEPARTED", scheduled_pass: "12:00 PM", pass_time: 720 },
-        { no: "BOXN-902", name: "Coal Freight Wagon", route: "Dadri (DFCCIL) -> Prayagraj Chheoki", track_line: "Down Loop Line", current_location: "Khurja Jn (KM 85)", current_km: 85, speed: 65, type: "Freight", status: "REGULATED AT LOOP", scheduled_pass: "03:00 PM", pass_time: 900 },
-        { no: "12418", name: "Prayagraj Express", route: "New Delhi (NDLS) -> Prayagraj Jn (PRYJ)", track_line: "Down Main Line", current_location: "Near Tundla (KM 195)", current_km: 195, speed: 105, type: "Superfast", status: "RUNNING ON TIME", scheduled_pass: "06:00 PM", pass_time: 1080 },
-        { no: "12554", name: "Vaishali Superfast Express", route: "New Delhi (NDLS) -> Saharsa (SHC)", track_line: "Down Main Line", current_location: "Hathras Jn (KM 155)", current_km: 155, speed: 95, type: "Express", status: "DELAYED 15 MIN", scheduled_pass: "07:15 PM", pass_time: 1155 },
-        { no: "12802", name: "Purushottam Express", route: "Puri (PURI) -> New Delhi (NDLS)", track_line: "Up Main Line", current_location: "Kanpur Outer (KM 415)", current_km: 415, speed: 105, type: "Superfast", status: "RUNNING ON TIME", scheduled_pass: "11:20 AM", pass_time: 680 }
-      ],
-      requests: [
-        { id: "REQ-01", dept: "CIVIL", task: "Track Tamping (TMS)", km: 130, track_line: "Down Main Line", duration: 120, urgency: "CRITICAL" },
-        { id: "REQ-02", dept: "ELECTRICAL", task: "OHE Neutral Section (TDMS)", km: 132, track_line: "Down Main Line", duration: 90, urgency: "HIGH" },
-        { id: "REQ-03", dept: "SIGNAL", task: "Point Machine 16A Overhaul (SMMS)", km: 129, track_line: "Down Main Line", duration: 60, urgency: "MEDIUM" },
-        { id: "REQ-04", dept: "CIVIL", task: "Deep Screening Machine (TMS)", km: 205, track_line: "Loop Line 2", duration: 120, urgency: "MEDIUM" }
-      ],
-      historical_maintenance: [
-        { block_id: "BLK-HIST-101", date: "17-Sep-2026", section: "Ghaziabad (KM 25-28)", track_line: "Up Main Line", departments: "CIVIL, ELECTRICAL", tasks: "Track Tamping + OHE Sag Adjustment", duration: 90, decision: "ALLOWED", remarks: "Completed within 1h 25m without train delay" },
-        { block_id: "BLK-HIST-102", date: "16-Sep-2026", section: "Aligarh Outer (KM 128)", track_line: "Down Main Line", departments: "SIGNAL", tasks: "Point Machine 14B Overhaul", duration: 60, decision: "ALLOWED", remarks: "Authorized during midday freight window" },
-        { block_id: "BLK-HIST-103", date: "16-Sep-2026", section: "Tundla Jn (KM 202-205)", track_line: "Loop Line 2", departments: "CIVIL", tasks: "Deep Ballast Screening Machine", duration: 180, decision: "DENIED", remarks: "Deferred due to festival express congestion" },
-        { block_id: "BLK-HIST-104", date: "15-Sep-2026", section: "Kanpur Yard (KM 438)", track_line: "Up Main Line", departments: "ELECTRICAL", tasks: "25kV OHE Isolator Switch Replacement", duration: 45, decision: "ALLOWED", remarks: "Night block safely executed" }
-      ],
-      completed_trains: [
-        { train_no: "12424", train_name: "Dibrugarh Rajdhani Express", crossed_time: "05:15 AM", track_line: "Up Main Line", speed: 125, delay: 0, status: "CLEARED ON TIME" },
-        { train_no: "12314", train_name: "Sealdah Rajdhani Express", crossed_time: "05:45 AM", track_line: "Up Main Line", speed: 120, delay: 4, status: "CLEARED ON TIME" },
-        { train_no: "22435", train_name: "Vande Bharat Express", crossed_time: "06:10 AM", track_line: "Down Main Line", speed: 130, delay: 0, status: "CLEARED ON TIME" },
-        { train_no: "BTPN-441", train_name: "Petroleum Tanker Freight", crossed_time: "06:40 AM", track_line: "Down Loop Line", speed: 65, delay: 10, status: "REGULATED AT SIDING" },
-        { train_no: "12560", train_name: "Shiv Ganga Express", crossed_time: "07:05 AM", track_line: "Up Main Line", speed: 110, delay: 0, status: "CLEARED ON TIME" },
-        { train_no: "12801", train_name: "Purushottam Express", crossed_time: "07:40 AM", track_line: "Up Main Line", speed: 105, delay: 5, status: "CLEARED ON TIME" }
-      ]
-    };
-
-    let clientDecisions = {};
-    let isStaticMode = false;
-
-    // Smart fetch interceptor that falls back gracefully on Netlify/static hosting
-    const originalFetch = window.fetch;
-    window.fetch = async function(url, options) {
-      if (typeof url === "string" && url.startsWith("/api/")) {
-        try {
-          const res = await originalFetch(url, options);
-          if (res.ok) return res;
-          throw new Error("API 404");
-        } catch (err) {
-          isStaticMode = true;
-          return handleStaticApi(url, options);
-        }
-      }
-      return originalFetch(url, options);
-    };
-
-    function handleStaticApi(url, options) {
-      const parsedUrl = new URL(url, window.location.origin);
-      const path = parsedUrl.pathname;
-
-      if (path === "/api/data") {
-        return new Response(JSON.stringify(STATIC_DATA), { status: 200 });
-      }
-      if (path === "/api/route-trains") {
-        return new Response(JSON.stringify(STATIC_DATA.trains), { status: 200 });
-      }
-      if (path === "/api/delay-history") {
-        return new Response(JSON.stringify({
-          days: ["11-Sep", "12-Sep", "13-Sep", "14-Sep", "15-Sep", "16-Sep", "17-Sep", "18-Sep (Today)"],
-          minutes_saved: [245, 290, 310, 275, 340, 315, 335, 320],
-          cumulative_hours: 37.2,
-          cost_saved_crores: 3.65,
-          punctuality_gain: "+8.7%"
-        }), { status: 200 });
-      }
-      if (path === "/api/track-train") {
-        const q = (parsedUrl.searchParams.get("query") || "").toLowerCase().trim();
-        for (const t of STATIC_DATA.trains) {
-          if (t.no.toLowerCase().includes(q) || t.name.toLowerCase().includes(q)) {
-            const distLeft = t.track_line.includes("Down") ? Math.max(0, 440 - t.current_km) : t.current_km;
-            const hoursLeft = distLeft / Math.max(t.speed, 40);
-            const minsLeft = Math.round(hoursLeft * 60);
-            const hrs = Math.floor(minsLeft / 60);
-            const rMins = minsLeft % 60;
-            return new Response(JSON.stringify({
-              found: true,
-              train_no: t.no,
-              train_name: t.name,
-              route: t.route,
-              current_location: t.current_location,
-              current_km: t.current_km,
-              current_speed_kmph: t.speed,
-              track_line: t.track_line,
-              status: t.status,
-              target_division: "Kanpur Central (NCR Division HQ - KM 440)",
-              distance_to_division_km: distLeft,
-              eta_text: hrs > 0 ? `${hrs} hr ${rMins} min` : `${rMins} min`,
-              eta_minutes: minsLeft
-            }), { status: 200 });
-          }
-        }
-        return new Response(JSON.stringify({ found: false, message: `No train found matching '${q}'. Try 12302, 22436, or Shatabdi.` }), { status: 200 });
-      }
-      if (path === "/api/decide-block") {
-        if (options && options.body) {
-          const body = JSON.parse(options.body);
-          clientDecisions[body.block_id] = body.action;
-        }
-        return new Response(JSON.stringify({ status: "Decision Recorded" }), { status: 200 });
-      }
-      if (path === "/api/history") {
-        return new Response(JSON.stringify({
-          maintenance_history: STATIC_DATA.historical_maintenance,
-          completed_trains: STATIC_DATA.completed_trains
-        }), { status: 200 });
-      }
-      if (path === "/api/add-demand") {
-        if (options && options.body) {
-          const body = JSON.parse(options.body);
-          STATIC_DATA.requests.unshift({
-            id: `EMERGENCY-${STATIC_DATA.requests.length + 1}`,
-            dept: body.dept,
-            task: body.task,
-            km: body.km,
-            track_line: body.track_line,
-            duration: body.duration,
-            urgency: body.urgency
-          });
-        }
-        return new Response(JSON.stringify({ status: "Added" }), { status: 200 });
-      }
-      if (path === "/api/optimize") {
-        let trains = JSON.parse(JSON.stringify(STATIC_DATA.trains));
-        const blocks = [
-          {
-            block_id: "BLK-ALJN-BUNDLE",
-            section: "Aligarh (KM 129 - 132)",
-            km: 130,
-            track_line: "Down Main Line (Line 2)",
-            start_time: "09:45",
-            end_time: "11:45",
-            start_min: 585,
-            end_min: 705,
-            duration: 120,
-            departments: ["CIVIL (TMS)", "ELECTRICAL (TDMS)", "SIGNAL (SMMS)"],
-            tasks: ["Track Tamping", "OHE Neutral Section", "Point Machine Overhaul"],
-            decision: clientDecisions["BLK-ALJN-BUNDLE"] || "PENDING",
-            status: clientDecisions["BLK-ALJN-BUNDLE"] === "ALLOW" ? "AUTHORIZED (GRANTED)" : (clientDecisions["BLK-ALJN-BUNDLE"] === "DENY" ? "DEFERRED (DENIED)" : "PENDING DISPATCHER ACTION")
-          },
-          {
-            block_id: "BLK-TDL-SOLO",
-            section: "Tundla (KM 205)",
-            km: 205,
-            track_line: "Loop Line 2 (Siding)",
-            start_time: "06:30",
-            end_time: "08:30",
-            start_min: 390,
-            end_min: 510,
-            duration: 120,
-            departments: ["CIVIL (TMS)"],
-            tasks: ["Deep Screening Machine"],
-            decision: clientDecisions["BLK-TDL-SOLO"] || "PENDING",
-            status: clientDecisions["BLK-TDL-SOLO"] === "ALLOW" ? "AUTHORIZED (GRANTED)" : (clientDecisions["BLK-TDL-SOLO"] === "DENY" ? "DEFERRED (DENIED)" : "PENDING DISPATCHER ACTION")
-          }
-        ];
-        return new Response(JSON.stringify({
-          status: "Optimized",
-          trains_evaluated: trains,
-          scheduled_blocks: blocks,
-          metrics: {
-            capacity_gain: "+19.2%",
-            delay_saved_min: 320,
-            bundling_efficiency: "2.5 Depts/Block"
-          }
-        }), { status: 200 });
-      }
-      return new Response(JSON.stringify({ error: "Not Found" }), { status: 404 });
-    }
-
-    loadData();
+      await loadData();
       await runOptimization();
       alert("🚨 Emergency Defect Detected at KM 131.2 (Down Main Line)! RailSamanvay has slotted an emergency block safely into the schedule.");
     }
@@ -1265,192 +1293,6 @@
       };
 
       Plotly.newPlot('mareyChart', traces, layout, { responsive: true, displayModeBar: false });
-    }
-
-    
-    // =========================================================
-    // UNIVERSAL DUAL-ENGINE ADAPTER (LOCAL PYTHON + STATIC NETLIFY)
-    // =========================================================
-    const STATIC_DATA = {
-      corridor: "New Delhi - Kanpur High Density Corridor (Northern and North Central Railway)",
-      stations: [
-        { name: "New Delhi (NDLS)", km: 0 },
-        { name: "Ghaziabad (GZB)", km: 25 },
-        { name: "Aligarh (ALJN)", km: 130 },
-        { name: "Tundla (TDL)", km: 205 },
-        { name: "Kanpur Central (CNB)", km: 440 }
-      ],
-      trains: [
-        { no: "12004", name: "Shatabdi Express", route: "New Delhi (NDLS) -> Lucknow (LJN)", track_line: "Down Main Line", current_location: "Ghaziabad Outer (KM 30)", current_km: 30, speed: 110, type: "Express", status: "RUNNING ON TIME", scheduled_pass: "07:00 AM", pass_time: 420 },
-        { no: "22436", name: "Vande Bharat Express", route: "New Delhi (NDLS) -> Varanasi (BSB)", track_line: "Down Main Line", current_location: "Approaching Aligarh (KM 120)", current_km: 120, speed: 130, type: "Superfast", status: "RUNNING ON TIME", scheduled_pass: "09:00 AM", pass_time: 540 },
-        { no: "12302", name: "Howrah Rajdhani Express", route: "New Delhi (NDLS) -> Howrah (HWH)", track_line: "Down Main Line", current_location: "New Delhi Yard (KM 5)", current_km: 5, speed: 120, type: "Superfast", status: "DEPARTED", scheduled_pass: "12:00 PM", pass_time: 720 },
-        { no: "BOXN-902", name: "Coal Freight Wagon", route: "Dadri (DFCCIL) -> Prayagraj Chheoki", track_line: "Down Loop Line", current_location: "Khurja Jn (KM 85)", current_km: 85, speed: 65, type: "Freight", status: "REGULATED AT LOOP", scheduled_pass: "03:00 PM", pass_time: 900 },
-        { no: "12418", name: "Prayagraj Express", route: "New Delhi (NDLS) -> Prayagraj Jn (PRYJ)", track_line: "Down Main Line", current_location: "Near Tundla (KM 195)", current_km: 195, speed: 105, type: "Superfast", status: "RUNNING ON TIME", scheduled_pass: "06:00 PM", pass_time: 1080 },
-        { no: "12554", name: "Vaishali Superfast Express", route: "New Delhi (NDLS) -> Saharsa (SHC)", track_line: "Down Main Line", current_location: "Hathras Jn (KM 155)", current_km: 155, speed: 95, type: "Express", status: "DELAYED 15 MIN", scheduled_pass: "07:15 PM", pass_time: 1155 },
-        { no: "12802", name: "Purushottam Express", route: "Puri (PURI) -> New Delhi (NDLS)", track_line: "Up Main Line", current_location: "Kanpur Outer (KM 415)", current_km: 415, speed: 105, type: "Superfast", status: "RUNNING ON TIME", scheduled_pass: "11:20 AM", pass_time: 680 }
-      ],
-      requests: [
-        { id: "REQ-01", dept: "CIVIL", task: "Track Tamping (TMS)", km: 130, track_line: "Down Main Line", duration: 120, urgency: "CRITICAL" },
-        { id: "REQ-02", dept: "ELECTRICAL", task: "OHE Neutral Section (TDMS)", km: 132, track_line: "Down Main Line", duration: 90, urgency: "HIGH" },
-        { id: "REQ-03", dept: "SIGNAL", task: "Point Machine 16A Overhaul (SMMS)", km: 129, track_line: "Down Main Line", duration: 60, urgency: "MEDIUM" },
-        { id: "REQ-04", dept: "CIVIL", task: "Deep Screening Machine (TMS)", km: 205, track_line: "Loop Line 2", duration: 120, urgency: "MEDIUM" }
-      ],
-      historical_maintenance: [
-        { block_id: "BLK-HIST-101", date: "17-Sep-2026", section: "Ghaziabad (KM 25-28)", track_line: "Up Main Line", departments: "CIVIL, ELECTRICAL", tasks: "Track Tamping + OHE Sag Adjustment", duration: 90, decision: "ALLOWED", remarks: "Completed within 1h 25m without train delay" },
-        { block_id: "BLK-HIST-102", date: "16-Sep-2026", section: "Aligarh Outer (KM 128)", track_line: "Down Main Line", departments: "SIGNAL", tasks: "Point Machine 14B Overhaul", duration: 60, decision: "ALLOWED", remarks: "Authorized during midday freight window" },
-        { block_id: "BLK-HIST-103", date: "16-Sep-2026", section: "Tundla Jn (KM 202-205)", track_line: "Loop Line 2", departments: "CIVIL", tasks: "Deep Ballast Screening Machine", duration: 180, decision: "DENIED", remarks: "Deferred due to festival express congestion" },
-        { block_id: "BLK-HIST-104", date: "15-Sep-2026", section: "Kanpur Yard (KM 438)", track_line: "Up Main Line", departments: "ELECTRICAL", tasks: "25kV OHE Isolator Switch Replacement", duration: 45, decision: "ALLOWED", remarks: "Night block safely executed" }
-      ],
-      completed_trains: [
-        { train_no: "12424", train_name: "Dibrugarh Rajdhani Express", crossed_time: "05:15 AM", track_line: "Up Main Line", speed: 125, delay: 0, status: "CLEARED ON TIME" },
-        { train_no: "12314", train_name: "Sealdah Rajdhani Express", crossed_time: "05:45 AM", track_line: "Up Main Line", speed: 120, delay: 4, status: "CLEARED ON TIME" },
-        { train_no: "22435", train_name: "Vande Bharat Express", crossed_time: "06:10 AM", track_line: "Down Main Line", speed: 130, delay: 0, status: "CLEARED ON TIME" },
-        { train_no: "BTPN-441", train_name: "Petroleum Tanker Freight", crossed_time: "06:40 AM", track_line: "Down Loop Line", speed: 65, delay: 10, status: "REGULATED AT SIDING" },
-        { train_no: "12560", train_name: "Shiv Ganga Express", crossed_time: "07:05 AM", track_line: "Up Main Line", speed: 110, delay: 0, status: "CLEARED ON TIME" },
-        { train_no: "12801", train_name: "Purushottam Express", crossed_time: "07:40 AM", track_line: "Up Main Line", speed: 105, delay: 5, status: "CLEARED ON TIME" }
-      ]
-    };
-
-    let clientDecisions = {};
-    let isStaticMode = false;
-
-    // Smart fetch interceptor that falls back gracefully on Netlify/static hosting
-    const originalFetch = window.fetch;
-    window.fetch = async function(url, options) {
-      if (typeof url === "string" && url.startsWith("/api/")) {
-        try {
-          const res = await originalFetch(url, options);
-          if (res.ok) return res;
-          throw new Error("API 404");
-        } catch (err) {
-          isStaticMode = true;
-          return handleStaticApi(url, options);
-        }
-      }
-      return originalFetch(url, options);
-    };
-
-    function handleStaticApi(url, options) {
-      const parsedUrl = new URL(url, window.location.origin);
-      const path = parsedUrl.pathname;
-
-      if (path === "/api/data") {
-        return new Response(JSON.stringify(STATIC_DATA), { status: 200 });
-      }
-      if (path === "/api/route-trains") {
-        return new Response(JSON.stringify(STATIC_DATA.trains), { status: 200 });
-      }
-      if (path === "/api/delay-history") {
-        return new Response(JSON.stringify({
-          days: ["11-Sep", "12-Sep", "13-Sep", "14-Sep", "15-Sep", "16-Sep", "17-Sep", "18-Sep (Today)"],
-          minutes_saved: [245, 290, 310, 275, 340, 315, 335, 320],
-          cumulative_hours: 37.2,
-          cost_saved_crores: 3.65,
-          punctuality_gain: "+8.7%"
-        }), { status: 200 });
-      }
-      if (path === "/api/track-train") {
-        const q = (parsedUrl.searchParams.get("query") || "").toLowerCase().trim();
-        for (const t of STATIC_DATA.trains) {
-          if (t.no.toLowerCase().includes(q) || t.name.toLowerCase().includes(q)) {
-            const distLeft = t.track_line.includes("Down") ? Math.max(0, 440 - t.current_km) : t.current_km;
-            const hoursLeft = distLeft / Math.max(t.speed, 40);
-            const minsLeft = Math.round(hoursLeft * 60);
-            const hrs = Math.floor(minsLeft / 60);
-            const rMins = minsLeft % 60;
-            return new Response(JSON.stringify({
-              found: true,
-              train_no: t.no,
-              train_name: t.name,
-              route: t.route,
-              current_location: t.current_location,
-              current_km: t.current_km,
-              current_speed_kmph: t.speed,
-              track_line: t.track_line,
-              status: t.status,
-              target_division: "Kanpur Central (NCR Division HQ - KM 440)",
-              distance_to_division_km: distLeft,
-              eta_text: hrs > 0 ? `${hrs} hr ${rMins} min` : `${rMins} min`,
-              eta_minutes: minsLeft
-            }), { status: 200 });
-          }
-        }
-        return new Response(JSON.stringify({ found: false, message: `No train found matching '${q}'. Try 12302, 22436, or Shatabdi.` }), { status: 200 });
-      }
-      if (path === "/api/decide-block") {
-        if (options && options.body) {
-          const body = JSON.parse(options.body);
-          clientDecisions[body.block_id] = body.action;
-        }
-        return new Response(JSON.stringify({ status: "Decision Recorded" }), { status: 200 });
-      }
-      if (path === "/api/history") {
-        return new Response(JSON.stringify({
-          maintenance_history: STATIC_DATA.historical_maintenance,
-          completed_trains: STATIC_DATA.completed_trains
-        }), { status: 200 });
-      }
-      if (path === "/api/add-demand") {
-        if (options && options.body) {
-          const body = JSON.parse(options.body);
-          STATIC_DATA.requests.unshift({
-            id: `EMERGENCY-${STATIC_DATA.requests.length + 1}`,
-            dept: body.dept,
-            task: body.task,
-            km: body.km,
-            track_line: body.track_line,
-            duration: body.duration,
-            urgency: body.urgency
-          });
-        }
-        return new Response(JSON.stringify({ status: "Added" }), { status: 200 });
-      }
-      if (path === "/api/optimize") {
-        let trains = JSON.parse(JSON.stringify(STATIC_DATA.trains));
-        const blocks = [
-          {
-            block_id: "BLK-ALJN-BUNDLE",
-            section: "Aligarh (KM 129 - 132)",
-            km: 130,
-            track_line: "Down Main Line (Line 2)",
-            start_time: "09:45",
-            end_time: "11:45",
-            start_min: 585,
-            end_min: 705,
-            duration: 120,
-            departments: ["CIVIL (TMS)", "ELECTRICAL (TDMS)", "SIGNAL (SMMS)"],
-            tasks: ["Track Tamping", "OHE Neutral Section", "Point Machine Overhaul"],
-            decision: clientDecisions["BLK-ALJN-BUNDLE"] || "PENDING",
-            status: clientDecisions["BLK-ALJN-BUNDLE"] === "ALLOW" ? "AUTHORIZED (GRANTED)" : (clientDecisions["BLK-ALJN-BUNDLE"] === "DENY" ? "DEFERRED (DENIED)" : "PENDING DISPATCHER ACTION")
-          },
-          {
-            block_id: "BLK-TDL-SOLO",
-            section: "Tundla (KM 205)",
-            km: 205,
-            track_line: "Loop Line 2 (Siding)",
-            start_time: "06:30",
-            end_time: "08:30",
-            start_min: 390,
-            end_min: 510,
-            duration: 120,
-            departments: ["CIVIL (TMS)"],
-            tasks: ["Deep Screening Machine"],
-            decision: clientDecisions["BLK-TDL-SOLO"] || "PENDING",
-            status: clientDecisions["BLK-TDL-SOLO"] === "ALLOW" ? "AUTHORIZED (GRANTED)" : (clientDecisions["BLK-TDL-SOLO"] === "DENY" ? "DEFERRED (DENIED)" : "PENDING DISPATCHER ACTION")
-          }
-        ];
-        return new Response(JSON.stringify({
-          status: "Optimized",
-          trains_evaluated: trains,
-          scheduled_blocks: blocks,
-          metrics: {
-            capacity_gain: "+19.2%",
-            delay_saved_min: 320,
-            bundling_efficiency: "2.5 Depts/Block"
-          }
-        }), { status: 200 });
-      }
-      return new Response(JSON.stringify({ error: "Not Found" }), { status: 404 });
     }
 
     loadData();

@@ -1527,4 +1527,8 @@ HTML_CONTENT = """<!DOCTYPE html>
 # Serve embedded UI directly
 @app.get("/", response_class=HTMLResponse)
 def serve_ui():
+    index_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "index.html")
+    if os.path.exists(index_file):
+        with open(index_file, "r", encoding="utf-8") as f:
+            return f.read()
     return HTML_CONTENT
